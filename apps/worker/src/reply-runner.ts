@@ -9,7 +9,7 @@
  * A deleted or inaccessible thread is not an error state.
  */
 
-import { domainOf, scanOptOut } from "@depinfin/compliance";
+import { detectOptOut, domainOf } from "@depinfin/compliance";
 import { transition } from "@depinfin/core";
 import type { EnrollmentStatus } from "@depinfin/compliance";
 import type { LogEntryInput } from "./dispatch-runner.js";
@@ -71,10 +71,9 @@ export async function runReplyPolling(
         message.receivedAt > newest.receivedAt ? message : newest,
       );
 
-      const scan = scanOptOut(latest.body);
+      const phrase = detectOptOut(latest.body);
 
-      if (scan.source === "reply" && scan.phrase !== null) {
-        const phrase = scan.phrase;
+      if (phrase !== null) {
         // INV-4. Suppress the address, and the whole firm domain with it: a
         // "take me off" from one person at a family office is not an invitation
         // to keep mailing the desk next to them.
@@ -117,15 +116,7 @@ export async function runReplyPolling(
           messageId: latest.id,
           from: latest.from,
           receivedAt: latest.receivedAt.toISOString(),
-          // A phrase found only in quoted history is usually our own footer
-          // coming back. It is flagged for the operator rather than acted on.
-          ...(scan.source === "quoted" && scan.phrase !== null
-            ? { possibleOptOutInQuotedText: scan.phrase }
-            : {}),
-          reason:
-            scan.source === "quoted"
-              ? `Prospect replied, check for an opt-out: "${scan.phrase}" appears in quoted text`
-              : "Prospect replied",
+          reason: "Prospect replied",
         },
       });
       replies += 1;

@@ -100,8 +100,7 @@ pnpm worker:poll-replies
 
 ## Judgment calls worth a look
 
-Three places where the implementation went slightly beyond, or slightly
-narrower than, the literal text of CLAUDE.md.
+Three places worth a second read before this handles real prospects.
 
 1. **The INV-2 term list does not catch inflections.** `guarantee` and
    `guaranteed` are both listed, but `guarantees` matches neither, and the same
@@ -111,13 +110,14 @@ narrower than, the literal text of CLAUDE.md.
    is a change to a compliance boundary, so it is flagged here rather than made
    quietly. Adding `guarantees`, `yields`, `returns of`, and `projected return`
    is the suggested change if you want it.
-2. **Opt-out detection separates the reply from quoted history.** Scanning the
-   whole body would mean our own "reply stop and we will take you off" footer
-   comes back on every ordinary reply and suppresses every prospect who
-   answered. Scanning only the typed reply risks missing an opt-out written
-   inside a quoted block. The compromise: a phrase in the typed reply is acted
-   on automatically per INV-4, and a phrase found only in quoted text is flagged
-   on the reply row for the operator queue. Nothing is silently discarded.
+2. **Opt-out detection reads the whole inbound body, quoted history included.**
+   That is INV-4 taken literally, and a missed opt-out is the worse of the two
+   failure modes. It carries one copy constraint: outbound mail must not say
+   "reply stop and we will take you off", because that line comes back inside
+   the quoted history of every ordinary reply and each of those replies then
+   reads as an opt-out. Warm one-to-one mail carries no footer, so this is not
+   a live problem today. Revisit it at section 12 step 9, when a cold sequence
+   needs an unsubscribe line.
 3. **The linter normalizes before matching.** NFKC folding, zero-width
    stripping, and unicode dash folding, so `a​py` and `risk‑free` with a
    non-ASCII hyphen are caught. Normalization only ever widens what is caught.

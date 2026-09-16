@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectOptOut, OPT_OUT_PHRASES, scanOptOut, stripQuotedReply } from "../src/optout.js";
+import { detectOptOut, OPT_OUT_PHRASES } from "../src/optout.js";
 import { findSuppression, isSuppressed } from "../src/suppression.js";
 import { evaluateSend } from "../src/pipeline.js";
 import { allowed, enrollment, evaluation, prospect, refusal, NOW } from "./fixtures.js";
@@ -86,39 +86,21 @@ describe("INV-4 inbound opt-out detection", () => {
     expect(detectOptOut("Our stoplight review is Thursday.")).toBeNull();
   });
 
-  it("ignores quoted history so our own footer cannot trigger an opt-out", () => {
+  it("scans the whole body, quoted history included", () => {
     const reply = [
       "Happy to talk Thursday.",
       "",
       "On Tue, Mar 3, 2026 at 9:02 AM Cole wrote:",
       "> If you would rather not hear from us, reply stop and we will remove you.",
     ].join("\n");
-    expect(detectOptOut(reply)).toBeNull();
+    // INV-4 reads on the reply, not on the part of it we judge the prospect to
+    // have typed. A missed opt-out is the worse failure. The cost is that an
+    // unsubscribe footer of ours, quoted back, reads as an opt-out, so
+    // outbound copy must not carry one.
+    expect(detectOptOut(reply)).toBe("stop");
   });
 
-  it("surfaces a quoted-only match for an operator instead of discarding it", () => {
-    const reply = [
-      "Happy to talk Thursday.",
-      "",
-      "On Tue, Mar 3, 2026 at 9:02 AM Cole wrote:",
-      "> Reply stop and we will take you off the list.",
-    ].join("\n");
-    expect(scanOptOut(reply)).toEqual({ phrase: "stop", source: "quoted" });
-    expect(detectOptOut(reply)).toBeNull();
-  });
-
-  it("acts automatically on a phrase the prospect actually typed", () => {
-    expect(scanOptOut("Please take me off, thanks.")).toEqual({
-      phrase: "take me off",
-      source: "reply",
-    });
-  });
-
-  it("reports no match at all on an ordinary reply", () => {
-    expect(scanOptOut("Sounds good, Thursday works.")).toEqual({ phrase: null, source: null });
-  });
-
-  it("strips angle-quoted lines", () => {
-    expect(stripQuotedReply("Real text\n> quoted unsubscribe line")).toBe("Real text");
+  it("acts on a phrase the prospect typed", () => {
+    expect(detectOptOut("Please take me off, thanks.")).toBe("take me off");
   });
 });

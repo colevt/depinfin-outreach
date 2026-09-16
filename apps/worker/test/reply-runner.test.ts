@@ -124,7 +124,7 @@ describe("reply handling, section 7", () => {
     expect(state.statuses).toEqual([]);
   });
 
-  it("flags a quoted-only opt-out phrase for the operator", async () => {
+  it("stops the sequence when an opt-out phrase appears anywhere in the body", async () => {
     const { ports, state } = fakeReplyPorts([
       message(
         [
@@ -137,23 +137,7 @@ describe("reply handling, section 7", () => {
     ]);
     await runReplyPolling(ports, { actor: "worker:test" });
 
-    expect(state.logs[0]?.action).toBe("reply");
-    expect(state.logs[0]?.detail).toMatchObject({ possibleOptOutInQuotedText: "stop" });
-    expect(state.suppressions).toEqual([]);
-  });
-
-  it("does not treat our own quoted footer as an opt-out", async () => {
-    const { ports, state } = fakeReplyPorts([
-      message(
-        [
-          "Sounds good, Thursday works.",
-          "",
-          "On Tue, Mar 3, 2026 at 9:02 AM Cole wrote:",
-          "> Reply stop and we will take you off the list.",
-        ].join("\n"),
-      ),
-    ]);
-    await runReplyPolling(ports, { actor: "worker:test" });
-    expect(state.statuses).toEqual([{ id: "enr-1", status: "replied" }]);
+    expect(state.logs[0]?.action).toBe("opt_out");
+    expect(state.statuses).toEqual([{ id: "enr-1", status: "stopped" }]);
   });
 });

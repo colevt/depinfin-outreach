@@ -25,59 +25,23 @@ const OPT_OUT_PATTERNS: readonly { phrase: string; pattern: RegExp }[] = OPT_OUT
   }),
 );
 
-export interface OptOutScan {
-  /** The phrase that matched, or null. */
-  readonly phrase: string | null;
-  /**
-   * Where it matched. `reply` is what the human typed and is acted on
-   * automatically. `quoted` means the phrase appears only in quoted history,
-   * which is usually our own footer coming back, so it is surfaced to the
-   * operator rather than acted on.
-   */
-  readonly source: "reply" | "quoted" | null;
-}
-
 /**
- * Scans an inbound body for an opt-out.
+ * Scans the whole inbound body and returns the phrase that matched, or null.
  *
- * Quoted history is separated first. Without that, our own "reply stop and we
- * will take you off" footer would come back on every ordinary reply and
- * suppress every prospect who answered. Matching on quoted text alone is
- * therefore not treated as an opt-out, but it is not discarded either: the
- * caller surfaces it to the operator queue so a real opt-out buried in a
- * quoted block is seen by a human the same morning.
- */
-export function scanOptOut(body: string): OptOutScan {
-  const reply = stripQuotedReply(body);
-  for (const { phrase, pattern } of OPT_OUT_PATTERNS) {
-    if (pattern.test(reply)) return { phrase, source: "reply" };
-  }
-  for (const { phrase, pattern } of OPT_OUT_PATTERNS) {
-    if (pattern.test(body)) return { phrase, source: "quoted" };
-  }
-  return { phrase: null, source: null };
-}
-
-/**
- * The phrase to act on automatically, or null. INV-4: on a match, suppress,
- * set do_not_contact, and terminate the sequence.
+ * The whole body, quoted history included. INV-4 reads on the reply, not on
+ * the part of the reply we judge the prospect to have typed, and a missed
+ * opt-out is the worse failure of the two.
+ *
+ * One consequence to know about before writing outbound copy: a message of
+ * ours that says "reply stop and we will take you off" comes back inside the
+ * quoted history of every ordinary reply, and every one of those replies then
+ * reads as an opt-out. Warm one-to-one mail carries no such footer, so this is
+ * not a live problem today. It becomes one the moment a cold sequence adds an
+ * unsubscribe line, which is a section 12 step 9 concern.
  */
 export function detectOptOut(body: string): string | null {
-  const scan = scanOptOut(body);
-  return scan.source === "reply" ? scan.phrase : null;
-}
-
-/** Trims the reply down to what the human actually typed, best effort. */
-export function stripQuotedReply(body: string): string {
-  const lines = body.split(/\r?\n/);
-  const kept: string[] = [];
-  for (const line of lines) {
-    if (/^\s*>/.test(line)) continue;
-    if (/^\s*on .+ wrote:\s*$/i.test(line)) break;
-    if (/^\s*-{2,}\s*original message\s*-{2,}\s*$/i.test(line)) break;
-    if (/^\s*_{5,}\s*$/.test(line)) break;
-    if (/^\s*from:\s*.+@/i.test(line)) break;
-    kept.push(line);
+  for (const { phrase, pattern } of OPT_OUT_PATTERNS) {
+    if (pattern.test(body)) return phrase;
   }
-  return kept.join("\n");
+  return null;
 }
