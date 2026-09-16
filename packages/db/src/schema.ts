@@ -118,6 +118,9 @@ export const templates = pgTable("templates", {
   audienceFirmTypes: firmTypeEnum("audience_firm_types").array().notNull().default([]),
   audienceOperatorCategories: operatorCategoryEnum("audience_operator_categories")
     .array().notNull().default([]),
+  /** INV-8. A sequence step can only reference an email template, enforced by
+   *  the composite foreign key in 0007. */
+  channel: draftChannelEnum("channel").notNull().default("email"),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -150,6 +153,9 @@ export const sequenceSteps = pgTable(
     stepNumber: integer("step_number").notNull(),
     delayDays: integer("delay_days").notNull().default(0),
     templateId: uuid("template_id").notNull().references(() => templates.id),
+    /** Always 'email'. Part of the composite foreign key that keeps a LinkedIn
+     *  template out of the dispatcher. */
+    templateChannel: draftChannelEnum("template_channel").notNull().default("email"),
     replyInThread: boolean("reply_in_thread").notNull().default(true),
   },
   (table) => ({ stepUnique: unique().on(table.sequenceId, table.stepNumber) }),

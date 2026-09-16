@@ -13,6 +13,7 @@ suite("the desk schema enforces its own rules", () => {
   const app = HAS_DB ? appSql() : null;
   const tag = `desk-${Date.now()}`;
   let contactId = "";
+  let sequenceId = "";
 
   beforeAll(async () => {
     if (!HAS_DB) return;
@@ -27,6 +28,13 @@ suite("the desk schema enforces its own rules", () => {
       RETURNING id
     `;
     contactId = rows[0]!.id;
+
+    const sequences = await owner!<{ id: string }[]>`
+      INSERT INTO sequences (name, transport, max_steps)
+      VALUES (${`Seq ${tag}`}, 'warm', 5)
+      RETURNING id
+    `;
+    sequenceId = sequences[0]!.id;
   });
 
   afterAll(async () => {
@@ -238,6 +246,85 @@ suite("the desk schema enforces its own rules", () => {
         () => app!`UPDATE automation_settings SET cold_outreach_enabled = true`,
         /gated on written outside counsel sign-off/i,
       );
+    });
+  });
+
+  describe("INV-8 and INV-9 a LinkedIn template cannot reach the dispatcher", () => {
+    it("has a LinkedIn template to attach in the first place", async () => {
+      // Without this, the refusal cases below would insert zero rows and pass
+      // for the wrong reason.
+      const rows = await app!<{ count: string }[]>`
+        SELECT count(*)::text AS count FROM templates WHERE key = 'li_buy_generalist'
+      `;
+      expect(rows[0]?.count).toBe("1");
+    });
+
+    it("refuses to attach a LinkedIn template to a sequence step", async () => {
+      // The composite foreign key in 0007 is what refuses this. A LinkedIn
+      // template attached to a step would be emailed by the dispatcher,
+      // subject line and all, to someone who was never mailed.
+      await expectRefused(
+        () => owner!`
+          INSERT INTO sequence_steps (sequence_id, step_number, delay_days, template_id)
+          SELECT ${sequenceId}::uuid, 99, 0, t.id
+          FROM templates t WHERE t.key = 'li_buy_generalist'
+        `,
+        /sequence_steps_template_channel_fkey|foreign key/i,
+      );
+    });
+
+    it("refuses a step that declares a non-email channel", async () => {
+      await expectRefused(
+        () => owner!`
+          INSERT INTO sequence_steps (sequence_id, step_number, delay_days, template_id, template_channel)
+          SELECT ${sequenceId}::uuid, 98, 0, t.id, 'linkedin'
+          FROM templates t WHERE t.key = 'li_buy_generalist'
+        `,
+        /sequence_steps_email_only/i,
+      );
+    });
+
+    it("refuses an email template with no subject", async () => {
+      await expectRefused(
+        () => owner!`
+          INSERT INTO templates (key, subject, body)
+          VALUES (${`empty-subject-${tag}`}, '  ', 'body')
+        `,
+        /templates_email_has_subject/i,
+      );
+    });
+
+    it("seeds LinkedIn templates with no subject and email templates with one", async () => {
+      const rows = await app!<{ channel: string; subject: string }[]>`
+        SELECT channel::text AS channel, subject FROM templates
+      `;
+      for (const row of rows) {
+        if (row.channel === "linkedin") expect(row.subject).toBe("");
+        else expect(row.subject.trim().length).toBeGreaterThan(0);
+      }
+      expect(rows.some((r) => r.channel === "linkedin")).toBe(true);
+    });
+  });
+
+  describe("templates are targeted by prospect type", () => {
+    it("ships a first touch template for every buy-side firm type", async () => {
+      const rows = await app!<{ missing: string[] }[]>`
+        SELECT array_agg(t.value::text) AS missing
+        FROM unnest(enum_range(NULL::firm_type)) AS t(value)
+        WHERE NOT EXISTS (
+          SELECT 1 FROM templates tpl
+          WHERE tpl.side = 'buy' AND tpl.stage = 'first_touch' AND tpl.channel = 'email'
+            AND (tpl.audience_firm_types = '{}' OR t.value = ANY (tpl.audience_firm_types))
+        )
+      `;
+      expect(rows[0]?.missing).toBeNull();
+    });
+
+    it("keeps every seeded template as corporate content", async () => {
+      const rows = await app!<{ count: string }[]>`
+        SELECT count(*)::text AS count FROM templates WHERE content_tier <> 'corporate'
+      `;
+      expect(rows[0]?.count).toBe("0");
     });
   });
 

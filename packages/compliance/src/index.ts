@@ -11,3 +11,4 @@ export * from "./suppression.js";
 export * from "./optout.js";
 export * from "./eligibility.js";
 export * from "./pipeline.js";
+export * from "./draft.js";
