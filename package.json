@@ -1,10 +1,14 @@
 {
   "name": "depinfin-outreach",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@9.12.0",
-  "engines": { "node": ">=20.11" },
+  "engines": {
+    "node": ">=20.11"
+  },
   "scripts": {
-    "typecheck": "tsc -b",
+    "build": "tsc -b",
+    "typecheck": "tsc -b && tsc -p tsconfig.tests.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:migrate": "node --experimental-strip-types packages/db/src/migrate.ts",

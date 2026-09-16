@@ -1,0 +1,70 @@
+# The section 8 suite, on every push. Two things this job exists to prevent:
+# a green run with the database tests skipped, and a green run that never
+# typechecked the tests themselves.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      # Two roles, as INV-5 requires. The application role must not own the
+      # tables, because an owner bypasses the grants the invariant rests on.
+      MIGRATION_DATABASE_URL: postgres://depinfin_owner:ci@localhost:5432/depinfin
+      TEST_MIGRATION_DATABASE_URL: postgres://depinfin_owner:ci@localhost:5432/depinfin
+      TEST_DATABASE_URL: postgres://depinfin_app:ci@localhost:5432/depinfin
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Create roles and database
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 \
+            -c "CREATE ROLE depinfin_owner LOGIN PASSWORD 'ci'" \
+            -c "CREATE ROLE depinfin_app LOGIN PASSWORD 'ci'" \
+            -c "CREATE DATABASE depinfin OWNER depinfin_owner"
+
+      - name: Typecheck packages and tests
+        run: pnpm typecheck
+
+      - name: Migrate
+        run: pnpm db:migrate
+
+      - name: Test
+        run: pnpm test
+
+      # The suite is only meaningful if it is re-runnable against a database
+      # that already holds the previous run's permanent suppressions.
+      - name: Test again, same database
+        run: pnpm test

@@ -62,6 +62,11 @@ suite("INV-5 the audit log is append-only", () => {
 suite("INV-4 suppressions are permanent", () => {
   const app = HAS_DB ? appSql() : null;
   const owner = HAS_DB ? ownerSql() : null;
+  // Per run, because these cases deactivate the entry and a suppression can
+  // never be deleted. A fixed address would come back already inactive on the
+  // second run, the deactivation trigger would have no transition to guard,
+  // and the case that asserts it guards one would pass for the wrong reason.
+  const address = `permanence-${Date.now()}@example.com`;
 
   afterAll(async () => {
     await app?.end({ timeout: 5 });
@@ -82,11 +87,11 @@ suite("INV-4 suppressions are permanent", () => {
   it("refuses a DELETE on suppressions", async () => {
     await owner!`
       INSERT INTO suppressions (value, match_type, reason, actor)
-      VALUES ('permanence-test@example.com', 'email', 'test', 'suite')
+      VALUES (${address}, 'email', 'test', 'suite')
       ON CONFLICT DO NOTHING
     `;
     await expectRefused(
-      () => owner!`DELETE FROM suppressions WHERE value = 'permanence-test@example.com'`,
+      () => owner!`DELETE FROM suppressions WHERE value = ${address}`,
       /append-only|permanent/i,
     );
   });
@@ -95,7 +100,7 @@ suite("INV-4 suppressions are permanent", () => {
     await expectRefused(
       () => app!`
         UPDATE suppressions SET active = false
-        WHERE value = 'permanence-test@example.com'
+        WHERE value = ${address}
       `,
       /actor and a reason|deactivat/i,
     );
@@ -105,11 +110,11 @@ suite("INV-4 suppressions are permanent", () => {
     await app!`
       UPDATE suppressions
       SET active = false, deactivated_by = 'cole', deactivation_reason = 'wrong person, confirmed'
-      WHERE value = 'permanence-test@example.com'
+      WHERE value = ${address}
     `;
     const rows = await app!<{ active: boolean; deactivated_at: Date | null }[]>`
       SELECT active, deactivated_at FROM suppressions
-      WHERE value = 'permanence-test@example.com'
+      WHERE value = ${address}
     `;
     expect(rows[0]?.active).toBe(false);
     expect(rows[0]?.deactivated_at).not.toBeNull();
@@ -119,7 +124,7 @@ suite("INV-4 suppressions are permanent", () => {
     await expectRefused(
       () => app!`
         UPDATE suppressions SET value = 'someone-else@example.com'
-        WHERE value = 'permanence-test@example.com'
+        WHERE value = ${address}
       `,
       /permanent/i,
     );

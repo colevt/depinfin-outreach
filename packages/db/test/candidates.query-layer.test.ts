@@ -13,6 +13,11 @@ suite("dispatch_candidates enforces INV-1, INV-4, INV-7 at the query layer", () 
   const owner = HAS_DB ? ownerSql() : null;
   const app = HAS_DB ? appSql() : null;
   const tag = `qlt-${Date.now()}`;
+  // Every fixture address lives on a per-run domain. A suppression is
+  // permanent by design (INV-4), so a fixed domain would survive the run that
+  // created it and poison the next one. This is not cosmetic: the domain-
+  // suppression case below cannot be cleaned up, only deactivated.
+  const domain = `${tag}.example.com`;
 
   async function seedProspect(opts: {
     label: string;
@@ -21,7 +26,7 @@ suite("dispatch_candidates enforces INV-1, INV-4, INV-7 at the query layer", () 
     status: string;
     doNotContact?: boolean;
   }): Promise<string> {
-    const email = `${opts.label}.${tag}@example.com`;
+    const email = `${opts.label}.${tag}@${domain}`;
     const rows = await owner!<{ id: string }[]>`
       WITH f AS (
         INSERT INTO firms (name, jurisdiction, tier)
@@ -67,17 +72,17 @@ suite("dispatch_candidates enforces INV-1, INV-4, INV-7 at the query layer", () 
 
   it("INV-1: a Tier 1 contact with a due step is absent from the result set", async () => {
     await seedProspect({ label: "tier1", tier: 1, jurisdiction: "us", status: "active" });
-    expect(await candidateEmails()).not.toContain(`tier1.${tag}@example.com`);
+    expect(await candidateEmails()).not.toContain(`tier1.${tag}@${domain}`);
   });
 
   it("INV-1: a manual_only enrollment is absent from the result set", async () => {
     await seedProspect({ label: "manual", tier: 2, jurisdiction: "us", status: "manual_only" });
-    expect(await candidateEmails()).not.toContain(`manual.${tag}@example.com`);
+    expect(await candidateEmails()).not.toContain(`manual.${tag}@${domain}`);
   });
 
   it("a Tier 2 US contact on an active enrollment IS in the result set", async () => {
     await seedProspect({ label: "eligible", tier: 2, jurisdiction: "us", status: "active" });
-    expect(await candidateEmails()).toContain(`eligible.${tag}@example.com`);
+    expect(await candidateEmails()).toContain(`eligible.${tag}@${domain}`);
   });
 
   it("INV-7: EU, UK, and EEA contacts are absent from the result set", async () => {
@@ -86,32 +91,32 @@ suite("dispatch_candidates enforces INV-1, INV-4, INV-7 at the query layer", () 
     }
     const emails = await candidateEmails();
     for (const jurisdiction of ["eu", "uk", "eea"]) {
-      expect(emails).not.toContain(`${jurisdiction}.${tag}@example.com`);
+      expect(emails).not.toContain(`${jurisdiction}.${tag}@${domain}`);
     }
   });
 
   it("INV-4: an exact email suppression removes the row", async () => {
     await seedProspect({ label: "supp-email", tier: 2, jurisdiction: "us", status: "active" });
-    expect(await candidateEmails()).toContain(`supp-email.${tag}@example.com`);
+    expect(await candidateEmails()).toContain(`supp-email.${tag}@${domain}`);
 
     await app!`
       INSERT INTO suppressions (value, match_type, reason, actor)
-      VALUES (${`supp-email.${tag}@example.com`}, 'email', 'test', 'suite')
+      VALUES (${`supp-email.${tag}@${domain}`}, 'email', 'test', 'suite')
     `;
-    expect(await candidateEmails()).not.toContain(`supp-email.${tag}@example.com`);
+    expect(await candidateEmails()).not.toContain(`supp-email.${tag}@${domain}`);
   });
 
   it("INV-4: a bare domain suppression removes every address at that domain", async () => {
     await app!`
       INSERT INTO suppressions (value, match_type, reason, actor)
-      VALUES ('example.com', 'domain', 'test', 'suite')
+      VALUES (${domain}, 'domain', 'test', 'suite')
     `;
     expect(await candidateEmails()).toEqual([]);
 
     await app!`
       UPDATE suppressions
       SET active = false, deactivated_by = 'suite', deactivation_reason = 'test teardown'
-      WHERE value = 'example.com' AND match_type = 'domain'
+      WHERE value = ${domain} AND match_type = 'domain'
     `;
   });
 
@@ -119,7 +124,7 @@ suite("dispatch_candidates enforces INV-1, INV-4, INV-7 at the query layer", () 
     await seedProspect({
       label: "dnc", tier: 2, jurisdiction: "us", status: "active", doNotContact: true,
     });
-    expect(await candidateEmails()).not.toContain(`dnc.${tag}@example.com`);
+    expect(await candidateEmails()).not.toContain(`dnc.${tag}@${domain}`);
   });
 
   it("section 5: replied, stopped, paused, and completed are absent", async () => {
@@ -128,7 +133,7 @@ suite("dispatch_candidates enforces INV-1, INV-4, INV-7 at the query layer", () 
     }
     const emails = await candidateEmails();
     for (const status of ["replied", "stopped", "paused", "completed"]) {
-      expect(emails).not.toContain(`${status}.${tag}@example.com`);
+      expect(emails).not.toContain(`${status}.${tag}@${domain}`);
     }
   });
 });
@@ -192,8 +197,11 @@ suite("INV-7 exclusion set matches the compliance default", () => {
 
   it("seeds exactly EU, UK, and EEA", async () => {
     const { DEFAULT_EXCLUDED_JURISDICTIONS } = await import("@depinfin/compliance");
+    // ::text, not the bare column. A Postgres enum orders by declaration
+    // order, so the bare column would come back eu, uk, eea and never match a
+    // sorted constant, no matter what the table actually holds.
     const rows = await owner!<{ jurisdiction: string }[]>`
-      SELECT jurisdiction FROM excluded_jurisdictions ORDER BY jurisdiction
+      SELECT jurisdiction FROM excluded_jurisdictions ORDER BY jurisdiction::text
     `;
     expect(rows.map((r) => r.jurisdiction)).toEqual([...DEFAULT_EXCLUDED_JURISDICTIONS].sort());
   });

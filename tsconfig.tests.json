@@ -1,0 +1,27 @@
+{
+  "// note": "Tests are typechecked separately from the package builds. They resolve workspace imports to source, exactly as the vitest aliases do, so what tsc checks is what vitest runs.",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@depinfin/compliance": ["./packages/compliance/src/index.ts"],
+      "@depinfin/core": ["./packages/core/src/index.ts"],
+      "@depinfin/db": ["./packages/db/src/index.ts"],
+      "@depinfin/transport-contract": ["./packages/transports/contract/src/index.ts"],
+      "@depinfin/transport-gmail": ["./packages/transports/gmail/src/index.ts"],
+      "@depinfin/transport-cold": ["./packages/transports/cold/src/index.ts"]
+    }
+  },
+  "include": [
+    "vitest.config.ts",
+    "packages/*/test/**/*.ts",
+    "packages/transports/*/test/**/*.ts",
+    "apps/*/test/**/*.ts"
+  ]
+}

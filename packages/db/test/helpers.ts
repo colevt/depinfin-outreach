@@ -15,6 +15,18 @@ export const OWNER_URL = process.env["TEST_MIGRATION_DATABASE_URL"];
 export const APP_URL = process.env["TEST_DATABASE_URL"];
 export const HAS_DB = Boolean(OWNER_URL && APP_URL);
 
+/**
+ * A skip is a local convenience. In CI it would mean INV-4 and INV-5 were
+ * never checked and the run went green anyway, which is the exact failure the
+ * skip exists to prevent. So CI refuses to start without a database.
+ */
+if (!HAS_DB && process.env["CI"]) {
+  throw new Error(
+    "CI requires TEST_MIGRATION_DATABASE_URL and TEST_DATABASE_URL. " +
+      "The grants and triggers behind INV-4 and INV-5 are only verifiable against a real Postgres.",
+  );
+}
+
 export function ownerSql() {
   if (!OWNER_URL) throw new Error("TEST_MIGRATION_DATABASE_URL is not set");
   return postgres(OWNER_URL, { max: 2, onnotice: () => {} });

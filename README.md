@@ -21,8 +21,9 @@ one is enforced and what is verified.
 | 8 | Enrichment adapters | Not started |
 | 9 | Cold transport on a separate domain | Adapter and guards built, no ESP wired |
 
-Nothing here has been executed. This machine has no Node, no pnpm, and no
-Postgres, so the test suite has never run. See "Before trusting any of this".
+The suite runs. 212 of 212 pass, including the INV-4 and INV-5 cases that need
+a real Postgres, and CI runs them on every push. See "What the suite actually
+covers".
 
 ## Where each invariant lives
 
@@ -59,25 +60,36 @@ Node 20.11 or newer, pnpm, and Postgres 14 or newer.
 
 ```bash
 pnpm install
-pnpm typecheck
+pnpm typecheck   # builds every package, then checks the tests against source
 pnpm test
 ```
 
-Database setup. The application role must not own the tables, because INV-5
-depends on grants that an owner bypasses.
+`pnpm typecheck` is also the build. It emits `dist/` for each package, which
+the worker scripts import, so run it before `pnpm worker:*`.
+
+Database setup. Two roles. The application role must not own the tables,
+because INV-5 depends on grants that an owner bypasses.
 
 ```bash
-createdb depinfin
-psql depinfin -c "CREATE ROLE depinfin_app LOGIN PASSWORD 'CHANGE_ME'"
+psql -c "CREATE ROLE depinfin_owner LOGIN PASSWORD 'CHANGE_ME'"
+psql -c "CREATE ROLE depinfin_app   LOGIN PASSWORD 'CHANGE_ME'"
+createdb depinfin -O depinfin_owner
 cp .env.example .env    # fill in both URLs
 pnpm db:migrate         # runs as MIGRATION_DATABASE_URL, never as the app role
 ```
 
-Then run the integration tests, which are skipped without a database:
+Then run the whole suite. Without these two variables the database cases skip,
+and under `CI=1` a missing database is a hard failure rather than a skip:
 
 ```bash
 TEST_MIGRATION_DATABASE_URL=... TEST_DATABASE_URL=... pnpm test
 ```
+
+The suite is re-runnable against a database that already holds a previous run's
+rows. That matters more here than in most projects: a suppression is permanent
+by design, so nothing can clean one up, and every fixture that creates one is
+scoped to a per-run address or domain. `.github/workflows/ci.yml` runs the
+suite twice against the same database to keep it that way.
 
 Dispatch:
 
@@ -87,16 +99,42 @@ pnpm worker:dispatch
 pnpm worker:poll-replies
 ```
 
-## Before trusting any of this
+## What the suite actually covers
 
-1. **The test suite has never run.** It was written against the section 8 list
-   but not executed, because this machine has no Node. The INV-2 patterns and
-   the opt-out and merge logic were verified separately by porting the regexes
-   and re-running every case from the test files, and all of them behaved. That
-   is a check on the pattern design, not a green suite. Run `pnpm test` first.
-2. **INV-4 and INV-5 are only verified against a real Postgres.** Those tests
-   skip without `TEST_DATABASE_URL`, deliberately: a green run on a laptop with
-   no database must not read as "the grants hold".
+212 tests, all passing, against Postgres 16. The database cases were run
+against a live database created by the setup above, and repeated against the
+same database to confirm the run leaves it usable.
+
+What running it for the first time found, all since fixed:
+
+1. **`dispatch()` did not reject a mismatched transport at compile time.** The
+   two `@ts-expect-error` directives in the INV-9 test were unused, which is
+   the compiler saying the misroute it was asserting against compiled fine.
+   `K` was inferred from all three arguments at once, TypeScript widened it to
+   `"warm" | "cold"`, and method parameter bivariance let a cold campaign
+   through the warm adapter. `NoInfer` on the campaign and message parameters
+   fixes it, and the directives are now load-bearing. The runtime
+   `TransportMismatchError` was never the intended first line of defence here.
+2. **Nothing built where the package entry points said it did.** Every package
+   compiled to `dist/src/index.js` while its `package.json` pointed at
+   `dist/index.js`, so no workspace import resolved and roughly thirty type
+   errors were being masked by `any`. Package builds now cover `src` only, and
+   the tests are typechecked separately by `tsconfig.tests.json` against
+   source, matching what vitest actually runs.
+3. **Two database fixtures could only pass once.** Both created permanent
+   suppressions at fixed addresses. On a second run against the same database
+   the deactivation case found its row already inactive, so the trigger it
+   asserts had no transition to guard and the case passed for the wrong reason.
+   Both are per-run now.
+
+Still true, and worth keeping in mind:
+
+- **INV-4 and INV-5 mean nothing without a real Postgres.** They are grants and
+  triggers. The tests skip without `TEST_DATABASE_URL` so a green laptop run is
+  never mistaken for "the grants hold", and CI refuses to start without one.
+- **Nothing has been run against live Gmail credentials or a live ESP.** Every
+  transport test uses a fake. Section 12 steps 4 and 9 are unexercised outside
+  the type system.
 
 ## Judgment calls worth a look
 

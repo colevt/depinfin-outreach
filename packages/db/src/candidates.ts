@@ -30,7 +30,12 @@ export interface DispatchCandidate {
   readonly enrollment: EnrollmentView;
 }
 
-interface CandidateRow {
+/**
+ * A type alias rather than an interface on purpose: drizzle's `execute<T>`
+ * constrains T to Record<string, unknown>, and only an alias carries the
+ * implicit index signature that satisfies it.
+ */
+type CandidateRow = {
   enrollment_id: string;
   enrollment_status: string;
   current_step: number;

@@ -53,16 +53,22 @@ export interface Campaign<K extends TransportKind> {
 }
 
 /**
- * The single dispatch entry point. `K` is shared across all three arguments,
- * so a cold campaign with a warm transport does not compile:
+ * The single dispatch entry point. `K` is fixed by the transport and the other
+ * two arguments must match it, so a cold campaign with a warm transport does
+ * not compile:
  *
  *   dispatch(gmail, coldCampaign, message)
- *   //             ^ Type '"cold"' is not assignable to type '"warm"'
+ *   //              ^ Type '"cold"' is not assignable to type '"warm"'
+ *
+ * The `NoInfer` wrappers are load-bearing. Without them `K` infers from all
+ * three arguments at once, TypeScript widens it to `"warm" | "cold"`, method
+ * parameter bivariance lets the mismatched pair through, and the misroute this
+ * whole module exists to prevent compiles cleanly.
  */
 export async function dispatch<K extends TransportKind>(
   transport: Transport<K>,
-  campaign: Campaign<K>,
-  message: OutboundMessage<K>,
+  campaign: Campaign<NoInfer<K>>,
+  message: OutboundMessage<NoInfer<K>>,
 ): Promise<SendResult> {
   // Belt and braces for a caller reaching this through an `any`.
   if (transport.kind !== campaign.transport || message.transport !== campaign.transport) {
