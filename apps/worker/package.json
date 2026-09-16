@@ -1,0 +1,16 @@
+{
+  "name": "@depinfin/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "dependencies": {
+    "@depinfin/compliance": "workspace:*",
+    "@depinfin/core": "workspace:*",
+    "@depinfin/db": "workspace:*",
+    "@depinfin/transport-contract": "workspace:*",
+    "@depinfin/transport-gmail": "workspace:*",
+    "@depinfin/transport-cold": "workspace:*"
+  },
+  "scripts": { "typecheck": "tsc -b" }
+}
