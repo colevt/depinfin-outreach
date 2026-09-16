@@ -10,7 +10,8 @@
     "db:migrate": "node --experimental-strip-types packages/db/src/migrate.ts",
     "worker:dispatch": "node --experimental-strip-types apps/worker/src/jobs/dispatch.ts",
     "worker:dry-run": "node --experimental-strip-types apps/worker/src/jobs/dispatch.ts --dry-run",
-    "worker:poll-replies": "node --experimental-strip-types apps/worker/src/jobs/poll-replies.ts"
+    "worker:poll-replies": "node --experimental-strip-types apps/worker/src/jobs/poll-replies.ts",
+    "web": "pnpm --filter @depinfin/web dev"
   },
   "devDependencies": {
     "@types/node": "^22.7.5",

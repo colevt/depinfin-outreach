@@ -62,6 +62,14 @@ export const firms = pgTable("firms", {
   source: text("source"),
   score: integer("score"),
   tier: integer("tier"),
+  /** Inputs the score was computed from, so a rescore is recomputable. */
+  scoreFactors: jsonb("score_factors").$type<{
+    mandateFit: number;
+    ticketFit: number;
+    categoryLiteracy: number;
+    warmPath: number;
+    decisionSpeed: number;
+  }>(),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

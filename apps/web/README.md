@@ -1,20 +1,21 @@
 # Operator UI
 
-Section 12 step 7. Not started.
+Section 12 step 7, built in the section 9 priority order.
 
-Build in the section 9 priority order, and not in a different one:
+1. **Action queue** at `/`. Everything in `replied`, newest first.
+2. **Today's sends** at `/sends`. Ready and held, with pipeline reasons as written.
+3. **Prospect detail** at `/prospects/[id]`. History, warm path, LinkedIn draft with a copy button.
+4. **Calendar strip** on the queue. Next seven days.
+5. **List building** at `/list`. Import, dedupe, score. Enrichment is step 8 and is not wired.
 
-1. **Action queue.** Everything in `replied` status, newest first. This is the
-   home screen and the only screen that matters most mornings.
-2. **Today's sends.** What will dispatch, and what was skipped with the reason.
-   The reasons already come out of the pipeline in plain language, for example
-   "Personal Reason empty" and "Domain suppressed: northarc.com". Render them
-   as they are. Do not map them back to codes.
-3. **Prospect detail.** Full history from `activity_log`, every logged touch,
-   warm path, and the LinkedIn draft with a copy button. INV-8: a copy button,
-   never a send button.
-4. **Calendar strip.** Next seven days alongside the queue.
-5. **List building.** Import, dedupe, enrich, score.
+The UI calls `packages/compliance` for eligibility. It does not decide eligibility itself, and it does not dispatch. Resume and stop go through the section 5 state machine and write `activity_log`.
 
-The UI calls `packages/compliance` for anything it displays about eligibility.
-It does not decide eligibility itself.
+```bash
+WEB_FIXTURES=1 pnpm web
+```
+
+Fixture mode is for review without Postgres. The banner is on purpose. Against a real database:
+
+```bash
+DATABASE_URL=postgres://depinfin_app:... pnpm web
+```

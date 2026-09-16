@@ -17,12 +17,12 @@ one is enforced and what is verified.
 | 4 | Warm transport, Gmail API OAuth | Built, needs credentials |
 | 5 | Dry-run mode, then live dispatch | Built |
 | 6 | Reply polling and opt-out handling | Built |
-| 7 | Operator UI, section 9 priority order | Not started |
+| 7 | Operator UI, section 9 priority order | Built |
 | 8 | Enrichment adapters | Not started |
 | 9 | Cold transport on a separate domain | Adapter and guards built, no ESP wired |
 
-Nothing here has been executed. This machine has no Node, no pnpm, and no
-Postgres, so the test suite has never run. See "Before trusting any of this".
+The operator desk can run against Postgres or, for review, against fixture
+data (`WEB_FIXTURES=1`). Automated sending is still the worker, never the UI.
 
 ## Where each invariant lives
 
@@ -50,7 +50,7 @@ packages/db            SQL migrations (authoritative), Drizzle schema for typed
                        queries, the dispatch_candidates view, repositories.
 packages/transports/   contract (types and dispatch), gmail (warm), cold.
 apps/worker            Gates 12 to 14, dry-run mode, reply polling.
-apps/web               Section 9 operator UI. Not started.
+apps/web               Section 9 operator UI: queue, sends, prospect, list.
 ```
 
 ## Running it
@@ -85,6 +85,7 @@ Dispatch:
 pnpm worker:dry-run      # every gate runs, the log is written, nothing is sent
 pnpm worker:dispatch
 pnpm worker:poll-replies
+WEB_FIXTURES=1 pnpm web   # operator desk on fixture data
 ```
 
 ## Before trusting any of this
