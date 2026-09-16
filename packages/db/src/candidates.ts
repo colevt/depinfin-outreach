@@ -62,7 +62,7 @@ type CandidateRow = {
   firm_name: string;
   tier: number | null;
   jurisdiction: Jurisdiction;
-}
+};
 
 /**
  * Candidates for one transport. The transport filter is part of the query, so

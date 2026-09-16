@@ -9,7 +9,10 @@ import { activityLog } from "../schema.js";
 
 export type LogAction =
   | "sent" | "skipped" | "blocked" | "error" | "reply" | "opt_out"
-  | "stage_change" | "enrolled" | "unenrolled" | "rescored";
+  | "stage_change" | "enrolled" | "unenrolled" | "rescored"
+  /** The internal digest. Distinct from "sent" so it never counts against the
+   *  daily cap on prospect mail. See migration 0008. */
+  | "digest";
 
 export interface LogEntry {
   readonly actor: string;

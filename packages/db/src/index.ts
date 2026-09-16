@@ -4,3 +4,4 @@ export * from "./candidates.js";
 export * from "./repositories/activity-log.js";
 export * from "./repositories/suppressions.js";
 export * from "./repositories/enrollments.js";
+export * from "./repositories/digest.js";

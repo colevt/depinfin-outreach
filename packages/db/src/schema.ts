@@ -42,6 +42,9 @@ export const suppressionMatchTypeEnum = pgEnum("suppression_match_type", ["email
 export const activityActionEnum = pgEnum("activity_action", [
   "sent", "skipped", "blocked", "error", "reply", "opt_out",
   "stage_change", "enrolled", "unenrolled", "rescored",
+  // Migration 0008. The internal digest, kept distinct from "sent" so it
+  // never counts against the daily cap on prospect mail.
+  "digest",
 ]);
 /** INV-6. Both values exist so offering_documents can be typed. Only
  *  'corporate' is accepted by templates, enforced by a check constraint. */
