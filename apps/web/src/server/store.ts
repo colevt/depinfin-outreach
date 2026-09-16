@@ -17,8 +17,8 @@ import {
   updateFirmScore,
   writeLog,
 } from "@depinfin/db";
-import { createFixtureStore } from "./fixtures.js";
-import type { LoggedSend, OperatorStore } from "./types.js";
+import { createFixtureStore } from "./fixtures";
+import type { LoggedSend, OperatorStore } from "./types";
 
 let cached: OperatorStore | null = null;
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { rescoreFirmAction, type ActionResult } from "../server/actions.js";
+import { rescoreFirmAction, type ActionResult } from "../server/actions";
 import type { ScoringFactors } from "@depinfin/core";
 
 const idle: ActionResult = { ok: true, message: "" };

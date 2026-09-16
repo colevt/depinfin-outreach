@@ -68,14 +68,14 @@ export async function selectDispatchCandidates(
   transport: TransportKind,
   limit: number,
 ): Promise<DispatchCandidate[]> {
-  const rows = await db.execute<CandidateRow>(sql`
+  const rows = await db.execute(sql`
     SELECT * FROM dispatch_candidates
     WHERE sequence_transport = ${transport}
     ORDER BY next_due_at NULLS FIRST, enrollment_id
     LIMIT ${limit}
   `);
 
-  return [...rows].map(toCandidate);
+  return [...(rows as unknown as CandidateRow[])].map(toCandidate);
 }
 
 function toCandidate(row: CandidateRow): DispatchCandidate {

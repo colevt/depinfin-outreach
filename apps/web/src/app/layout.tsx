@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { currentActor } from "../server/actor.js";
-import { fixturesEnabled } from "../server/store.js";
-import { Nav } from "../components/Nav.js";
+import { currentActor } from "../server/actor";
+import { fixturesEnabled } from "../server/store";
+import { Nav } from "../components/Nav";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,7 +19,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
-          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap"
+          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap"
           rel="stylesheet"
         />
       </head>

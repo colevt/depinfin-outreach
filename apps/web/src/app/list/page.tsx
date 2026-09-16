@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { ImportForm } from "../../components/ImportForm.js";
-import { RescoreForm } from "../../components/RescoreForm.js";
-import { displayName, jurisdictionLabel, tierLabel } from "../../server/now.js";
-import { getStore } from "../../server/store.js";
+import { ImportForm } from "../../components/ImportForm";
+import { RescoreForm } from "../../components/RescoreForm";
+import { displayName, jurisdictionLabel, tierLabel } from "../../server/now";
+import { getStore } from "../../server/store";
 
 export default async function ListPage() {
   const store = getStore();

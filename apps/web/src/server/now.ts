@@ -1,5 +1,5 @@
-import { FIXTURE_NOW } from "./fixtures.js";
-import type { OperatorStore } from "./types.js";
+import { FIXTURE_NOW } from "./fixtures";
+import type { OperatorStore } from "./types";
 
 export function deskNow(store: OperatorStore): Date {
   return store.usingFixtures ? FIXTURE_NOW : new Date();

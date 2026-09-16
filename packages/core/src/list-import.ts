@@ -245,7 +245,7 @@ export function parseImportCsv(csv: string): ParseResult {
 
     const emailRaw = get("email");
     const email = emailRaw ? normalizeEmail(emailRaw) : null;
-    if (emailRaw && !email.includes("@")) {
+    if (email !== null && !email.includes("@")) {
       rowErrors.push({ line: lineNumber, reason: `Email looks wrong: "${emailRaw}"` });
     }
 

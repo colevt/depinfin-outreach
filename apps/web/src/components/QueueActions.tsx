@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { resumeEnrollment, stopEnrollment, type ActionResult } from "../server/actions.js";
+import { resumeEnrollment, stopEnrollment, type ActionResult } from "../server/actions";
 
 const idle: ActionResult = { ok: true, message: "" };
 

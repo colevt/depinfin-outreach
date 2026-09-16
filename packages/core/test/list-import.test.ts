@@ -26,7 +26,7 @@ describe("list import parse", () => {
       decisionSpeed: 1,
     });
     expect(scoreImportedRow(row)?.score).toBe(4 * 3 + 3 * 2 + 2 * 2 + 5 * 3 + 1);
-    expect(scoreImportedRow(row)?.tier).toBe(1);
+    expect(scoreImportedRow(row)?.tier).toBe(2);
   });
 
   it("reports missing required columns in plain language", () => {

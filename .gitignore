@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .next/
+.tools/
 *.tsbuildinfo
 .env
 .env.local

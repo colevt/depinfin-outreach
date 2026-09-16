@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { setActor } from "../server/actions.js";
+import { setActor } from "../server/actions";
 
 const LINKS = [
   { href: "/", label: "Queue" },

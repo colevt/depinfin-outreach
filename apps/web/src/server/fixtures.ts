@@ -18,7 +18,7 @@ import type {
   SendPreviewRow,
 } from "@depinfin/db";
 import type { ScoringFactors } from "@depinfin/core";
-import type { LoggedSend, OperatorStore } from "./types.js";
+import type { LoggedSend, OperatorStore } from "./types";
 
 export const FIXTURE_NOW = new Date("2026-09-16T14:00:00.000Z");
 

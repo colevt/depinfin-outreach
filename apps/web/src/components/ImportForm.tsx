@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { importProspects, type ImportActionResult } from "../server/actions.js";
+import { importProspects, type ImportActionResult } from "../server/actions";
 
 const idle: ImportActionResult = { ok: true, message: "", imported: 0, duplicates: 0, errors: 0 };
 

@@ -46,7 +46,7 @@ export interface OperatorStore {
     actor: string;
     contactId: string | null;
     enrollmentId: string | null;
-    action: "stage_change" | "rescored" | "enrolled";
+    action: "stage_change" | "rescored" | "enrolled" | "sent" | "skipped" | "blocked" | "error" | "reply" | "opt_out" | "unenrolled";
     detail: Record<string, unknown>;
   }): Promise<void>;
   insertImportedRow(row: ImportedProspect): Promise<{

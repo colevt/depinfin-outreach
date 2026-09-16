@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { IllegalTransitionError, transition } from "@depinfin/core";
 import { dedupeImport, parseImportCsv, rescore, scoreImportedRow, type Factor } from "@depinfin/core";
-import { currentActor, persistActor } from "./actor.js";
-import { getStore } from "./store.js";
+import { currentActor, persistActor } from "./actor";
+import { getStore } from "./store";
 
 export interface ActionResult {
   readonly ok: boolean;

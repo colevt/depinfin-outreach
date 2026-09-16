@@ -30,11 +30,11 @@ import type {
 } from "@depinfin/compliance";
 
 export interface ScoreFactors {
-  readonly mandateFit: number;
-  readonly ticketFit: number;
-  readonly categoryLiteracy: number;
-  readonly warmPath: number;
-  readonly decisionSpeed: number;
+  readonly mandateFit: 1 | 2 | 3 | 4 | 5;
+  readonly ticketFit: 1 | 2 | 3 | 4 | 5;
+  readonly categoryLiteracy: 1 | 2 | 3 | 4 | 5;
+  readonly warmPath: 1 | 2 | 3 | 4 | 5;
+  readonly decisionSpeed: 1 | 2 | 3 | 4 | 5;
 }
 
 export interface ImportedProspect {
@@ -307,10 +307,9 @@ export async function listCalendarWindow(
  * reason coming from evaluateSend. The worker never reads this function.
  */
 export async function listSendPreviewRows(db: Database, now: Date): Promise<SendPreviewRow[]> {
-  const start = startOfUtcDay(now);
-  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  const end = new Date(startOfUtcDay(now).getTime() + 24 * 60 * 60 * 1000);
 
-  const rows = await db.execute<{
+  type PreviewSqlRow = {
     enrollment_id: string;
     enrollment_status: EnrollmentStatus;
     current_step: number;
@@ -336,7 +335,9 @@ export async function listSendPreviewRows(db: Database, now: Date): Promise<Send
     firm_name: string;
     tier: number | null;
     jurisdiction: Jurisdiction;
-  }>(sql`
+  };
+
+  const rows = (await db.execute(sql`
     SELECT
       e.id                AS enrollment_id,
       e.status            AS enrollment_status,
@@ -380,9 +381,9 @@ export async function listSendPreviewRows(db: Database, now: Date): Promise<Send
         OR e.last_sent_at IS NULL
       )
     ORDER BY e.next_due_at NULLS FIRST, e.id
-  `);
+  `)) as unknown as PreviewSqlRow[];
 
-  return [...rows].map((row) => ({
+  return rows.map((row) => ({
     enrollmentId: row.enrollment_id,
     sequenceId: row.sequence_id,
     sequenceName: row.sequence_name,
@@ -548,7 +549,7 @@ export async function listActivityForContact(db: Database, contactId: string): P
 }
 
 export async function listDirectory(db: Database): Promise<DirectoryRow[]> {
-  const rows = await db.execute<{
+  type DirectorySqlRow = {
     contact_id: string;
     firm_id: string;
     first_name: string;
@@ -562,7 +563,9 @@ export async function listDirectory(db: Database): Promise<DirectoryRow[]> {
     personal_reason: string | null;
     do_not_contact: boolean;
     enrollment_status: EnrollmentStatus | null;
-  }>(sql`
+  };
+
+  const rows = (await db.execute(sql`
     SELECT DISTINCT ON (c.id)
       c.id AS contact_id,
       f.id AS firm_id,
@@ -590,9 +593,9 @@ export async function listDirectory(db: Database): Promise<DirectoryRow[]> {
         WHEN 'not_started' THEN 4
         ELSE 5
       END
-  `);
+  `)) as unknown as DirectorySqlRow[];
 
-  return [...rows]
+  return rows
     .map((row) => ({
       contactId: row.contact_id,
       firmId: row.firm_id,
@@ -644,7 +647,12 @@ export async function getEnrollment(db: Database, enrollmentId: string) {
     .innerJoin(firms, eq(firms.id, contacts.firmId))
     .where(eq(enrollments.id, enrollmentId))
     .limit(1);
-  return rows[0] ?? null;
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    ...row,
+    currentTier: (row.currentTier as Tier | null) ?? null,
+  };
 }
 
 export async function insertImportedRow(

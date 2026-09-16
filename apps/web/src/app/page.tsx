@@ -1,8 +1,8 @@
-import { CalendarStrip } from "../components/CalendarStrip.js";
-import { QueueActions } from "../components/QueueActions.js";
-import { buildCalendarDays, relativeTime } from "../server/calendar.js";
-import { deskNow, displayName, jurisdictionLabel, tierLabel } from "../server/now.js";
-import { getStore } from "../server/store.js";
+import { CalendarStrip } from "../components/CalendarStrip";
+import { QueueActions } from "../components/QueueActions";
+import { buildCalendarDays, relativeTime } from "../server/calendar";
+import { deskNow, displayName, jurisdictionLabel, tierLabel } from "../server/now";
+import { getStore } from "../server/store";
 
 export default async function QueuePage() {
   const store = getStore();

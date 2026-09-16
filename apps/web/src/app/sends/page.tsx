@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { SkipReason } from "../../components/SkipReason.js";
-import { evaluatePreviewRow, splitPreview } from "../../server/preview.js";
-import { deskNow, tierLabel } from "../../server/now.js";
-import { getStore } from "../../server/store.js";
+import { SkipReason } from "../../components/SkipReason";
+import { evaluatePreviewRow, splitPreview } from "../../server/preview";
+import { deskNow, tierLabel } from "../../server/now";
+import { getStore } from "../../server/store";
 
 export default async function SendsPage() {
   const store = getStore();

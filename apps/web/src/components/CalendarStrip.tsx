@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { CalendarDay } from "../server/calendar.js";
+import type { CalendarDay } from "../server/calendar";
 
 export function CalendarStrip({ days }: { days: readonly CalendarDay[] }) {
   return (

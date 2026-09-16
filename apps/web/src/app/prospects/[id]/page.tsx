@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import type { ProspectView } from "@depinfin/compliance";
 import { draftLinkedInMessage } from "@depinfin/core";
-import { CopyButton } from "../../../components/CopyButton.js";
-import { QueueActions } from "../../../components/QueueActions.js";
-import { formatWhen } from "../../../server/calendar.js";
-import { displayName, jurisdictionLabel, tierLabel } from "../../../server/now.js";
-import { getStore } from "../../../server/store.js";
+import { CopyButton } from "../../../components/CopyButton";
+import { QueueActions } from "../../../components/QueueActions";
+import { formatWhen } from "../../../server/calendar";
+import { displayName, jurisdictionLabel, tierLabel } from "../../../server/now";
+import { getStore } from "../../../server/store";
 
 export default async function ProspectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -140,6 +140,8 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
 
 function reasonFromDetail(detail: Record<string, unknown>): string | null {
   if (typeof detail.reason === "string") return detail.reason;
+  if (typeof detail.subject === "string") return detail.subject;
   if (detail.to && detail.from) return `Moved from ${String(detail.from)} to ${String(detail.to)}`;
+  if (detail.to) return `Moved to ${String(detail.to)}`;
   return null;
 }
