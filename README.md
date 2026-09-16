@@ -17,13 +17,12 @@ one is enforced and what is verified.
 | 4 | Warm transport, Gmail API OAuth | Built, needs credentials |
 | 5 | Dry-run mode, then live dispatch | Built |
 | 6 | Reply polling and opt-out handling | Built |
-| 7 | Operator UI, section 9 priority order | Not started |
-| 8 | Enrichment adapters | Not started |
+| 7 | Operator UI, section 9 priority order | Built, apart from the calendar strip |
+| 8 | Enrichment adapters | Not started. Research is recorded by hand, with sources |
 | 9 | Cold transport on a separate domain | Adapter and guards built, no ESP wired |
 
-The suite runs. 212 of 212 pass, including the INV-4 and INV-5 cases that need
-a real Postgres, and CI runs them on every push. See "What the suite actually
-covers".
+The suite runs. 498 of 498 pass, including the cases that need a real Postgres,
+and CI runs them on every push. See "What the suite actually covers".
 
 ## Where each invariant lives
 
@@ -36,7 +35,7 @@ covers".
 | INV-5 append-only audit log | grants and triggers in `migrations/0003` | `packages/db/test/inv5.append-only.test.ts` |
 | INV-6 content tiers separated | `templates_corporate_only` check constraint, no FK to `offering_documents` | `inv6-7.content-and-jurisdiction.test.ts`, `candidates.query-layer.test.ts` |
 | INV-7 excluded jurisdictions | `excluded_jurisdictions` joined in the view, gate 5 | `inv6-7.content-and-jurisdiction.test.ts`, `candidates.query-layer.test.ts` |
-| INV-8 no LinkedIn automation | No browser driver, headless client, or LinkedIn dependency exists in this repo | Absence of any such dependency in `package.json` |
+| INV-8 no LinkedIn automation | Search building only, in `packages/core/src/search`. Nothing in the repo fetches LinkedIn | `packages/core/test/search.test.ts` greps the module for `fetch`, `axios`, `puppeteer`, `playwright`, `selenium`, and `headless`. A LinkedIn template cannot attach to a sequence step, by composite foreign key |
 | INV-9 separate sending paths | Type-level in `packages/transports/contract`, domain check at construction | `packages/transports/cold/test/inv9.transport-separation.test.ts` |
 | INV-10 no referral mechanics | No commission, payout, or referral table, column, or code path exists | Absence |
 
@@ -44,15 +43,34 @@ covers".
 
 ```
 packages/compliance    Linter, suppression, eligibility, merge, the pure gate
-                       pipeline. Single source of truth for INV-1 to INV-4 and
-                       INV-7. No I/O, no clock read, no environment variable.
-packages/core          Sequence state machine, scoring, rescoring guardrails.
+                       pipeline, and the draft gates. Single source of truth
+                       for INV-1 to INV-4 and INV-7. No I/O, no clock read, no
+                       environment variable.
+packages/core          Sequence state machine, scoring, the knowledge and ICP
+                       layer, the search builder, the draft composer, the
+                       digest builder.
 packages/db            SQL migrations (authoritative), Drizzle schema for typed
                        queries, the dispatch_candidates view, repositories.
 packages/transports/   contract (types and dispatch), gmail (warm), cold.
-apps/worker            Gates 12 to 14, dry-run mode, reply polling.
-apps/web               Section 9 operator UI. Not started.
+apps/worker            Gates 12 to 14, dry-run mode, reply polling, the digest.
+apps/web               The desk. See apps/web/README.md.
 ```
+
+## What DePINfin is, and who the buy side is
+
+`packages/core/src/knowledge` holds it, once, so drafts and research prompts
+stop restating it and stop getting it wrong. Two descriptions live there and
+they are not interchangeable: the internal shorthand "compliance and
+capital-formation layer" is exactly the phrasing section 13 forbids in
+prospect-facing copy, so the approved external line leads with software and
+names the SPV as issuer of record. Every prospect-facing string in that
+directory is run through the linter by its own test.
+
+`icp.ts` defines both sides. Buy side is capital, and it is where the
+securities posture lives: everything in section 2 is about not mishandling a
+buy-side prospect. Sell side is the operators who would raise through the
+platform, tracked but not a focus. Whether that distinction holds legally is a
+question for counsel, not for a source file, and the file says so.
 
 ## Running it
 
@@ -91,19 +109,28 @@ by design, so nothing can clean one up, and every fixture that creates one is
 scoped to a per-run address or domain. `.github/workflows/ci.yml` runs the
 suite twice against the same database to keep it that way.
 
-Dispatch:
+Dispatch and the digest:
 
 ```bash
-pnpm worker:dry-run      # every gate runs, the log is written, nothing is sent
+pnpm worker:dry-run          # every gate runs, the log is written, nothing is sent
 pnpm worker:dispatch
 pnpm worker:poll-replies
+pnpm worker:digest-dry-run   # builds and logs the digest without sending
+pnpm worker:digest
+```
+
+The desk:
+
+```bash
+pnpm dev                 # http://localhost:3000
 ```
 
 ## What the suite actually covers
 
-212 tests, all passing, against Postgres 16. The database cases were run
+498 tests, all passing, against Postgres 16. The database cases were run
 against a live database created by the setup above, and repeated against the
-same database to confirm the run leaves it usable.
+same database to confirm the run leaves it usable. The desk was run against
+that database too, with every route checked.
 
 What running it for the first time found, all since fixed:
 
@@ -126,6 +153,19 @@ What running it for the first time found, all since fixed:
    the deactivation case found its row already inactive, so the trigger it
    asserts had no transition to guard and the case passed for the wrong reason.
    Both are per-run now.
+
+Two more the desk found, also fixed:
+
+4. **Raw queries returned timestamps as strings while the row types said
+   `Date`.** drizzle's `execute` does not carry the query builder's column
+   types, so a `timestamptz` arrives as a string and a row type claiming `Date`
+   is a lie the compiler cannot catch. Every page showing a time failed at
+   runtime, and the digest would have failed the same way when it formatted
+   one. Raw queries hydrate their timestamps now, and `packages/db/test/rows.test.ts`
+   covers it.
+5. **A `Date` passed into a raw query template failed to serialize.** The
+   mirror image of the same problem, on the way in. Timestamps are ISO strings
+   with an explicit cast now.
 
 Still true, and worth keeping in mind:
 

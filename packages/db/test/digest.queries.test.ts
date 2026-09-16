@@ -54,10 +54,12 @@ suite("digest queries run", () => {
   });
 
   it("finds a prospect added inside the window, with its firm joined", async () => {
+    // Matched on the per-run firm, not on the name. Two people called Dana
+    // Reyes is an ordinary thing for a prospect database to contain.
     const rows = await newProspectsSince(handle!.db, since);
-    const row = rows.find((r) => r.name === "Dana Reyes");
+    const row = rows.find((r) => r.firm_name === `Firm ${tag}`);
     expect(row).toBeDefined();
-    expect(row?.firm_name).toBe(`Firm ${tag}`);
+    expect(row?.name).toBe("Dana Reyes");
     expect(row?.firm_type).toBe("crypto_fund");
     expect(row?.side).toBe("buy");
     expect(row?.tier).toBe(2);
@@ -66,7 +68,7 @@ suite("digest queries run", () => {
   it("does not find one added before the window", async () => {
     const future = new Date(Date.now() + 60 * 60 * 1000);
     const rows = await newProspectsSince(handle!.db, future);
-    expect(rows.find((r) => r.name === "Dana Reyes")).toBeUndefined();
+    expect(rows.find((r) => r.firm_name === `Firm ${tag}`)).toBeUndefined();
   });
 
   it("finds the open draft with its contact and firm", async () => {
@@ -102,17 +104,24 @@ suite("digest queries run", () => {
   it("can write a digest log row, and it does not count as a send", async () => {
     // INV-5 holds: this is an insert, and the application role has no other
     // verb on activity_log. The point here is that 'digest' is a distinct
-    // action, so gate 12's count of the day's sends does not see it.
+    // action, so gate 12's count of the day's sends does not move.
+    //
+    // Asserted as a delta rather than against zero. Whatever else the database
+    // holds is not this test's business, and a count that happens to be zero
+    // today would make this pass for the wrong reason tomorrow.
+    const before = await dispatchCountsSince(handle!.db, since);
+
     await handle!.sql`
       INSERT INTO activity_log (actor, action, detail)
       VALUES ('suite', 'digest', ${JSON.stringify({ tag })}::jsonb)
     `;
-    const counts = await dispatchCountsSince(handle!.db, since);
+
+    const after = await dispatchCountsSince(handle!.db, since);
     const rows = await handle!.sql<{ count: string }[]>`
       SELECT count(*)::text AS count FROM activity_log
       WHERE action = 'digest' AND detail ->> 'tag' = ${tag}
     `;
     expect(rows[0]?.count).toBe("1");
-    expect(counts.sent).toBe(0);
+    expect(after).toEqual(before);
   });
 });

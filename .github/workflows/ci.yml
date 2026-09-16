@@ -68,3 +68,8 @@ jobs:
       # that already holds the previous run's permanent suppressions.
       - name: Test again, same database
         run: pnpm test
+
+      # The desk is where an operator meets the invariants, so a build that
+      # fails is the same kind of problem as a failing test.
+      - name: Build the desk
+        run: pnpm build:web

@@ -8,9 +8,11 @@
   },
   "scripts": {
     "build": "tsc -b",
-    "typecheck": "tsc -b && tsc -p tsconfig.tests.json",
+    "build:web": "pnpm --filter @depinfin/web build",
+    "typecheck": "tsc -b && tsc -p tsconfig.tests.json && pnpm --filter @depinfin/web typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
+    "dev": "pnpm --filter @depinfin/web dev",
     "db:migrate": "node --experimental-strip-types packages/db/src/migrate.ts",
     "worker:dispatch": "node --experimental-strip-types apps/worker/src/jobs/dispatch.ts",
     "worker:dry-run": "node --experimental-strip-types apps/worker/src/jobs/dispatch.ts --dry-run",

@@ -10,6 +10,7 @@
 
 import { sql } from "drizzle-orm";
 import type { Database } from "../client.js";
+import { hydrateDates } from "../rows.js";
 
 /**
  * Two conventions in this file, both learned the hard way against a real
@@ -23,6 +24,10 @@ import type { Database } from "../client.js";
  * cast. A JS Date passed straight into a raw `sql` template reaches the driver
  * as an object it will not serialize, and the query fails at runtime while
  * typechecking cleanly.
+ *
+ * Timestamps coming back are hydrated with `hydrateDates`, for the mirror
+ * image of the same problem: `execute` returns them as strings whatever the
+ * row type says.
  */
 
 export type DigestProspectRow = {
@@ -94,7 +99,7 @@ export async function newProspectsSince(db: Database, since: Date): Promise<Dige
     WHERE c.created_at >= ${since.toISOString()}::timestamptz
     ORDER BY f.tier NULLS LAST, f.score DESC NULLS LAST, c.created_at DESC
   `);
-  return [...rows];
+  return hydrateDates([...rows], ["added_at"]);
 }
 
 /**
@@ -126,7 +131,7 @@ export async function awaitingReply(db: Database, limit = 25): Promise<DigestRep
     ORDER BY e.replied_at DESC NULLS LAST
     LIMIT ${limit}
   `);
-  return [...rows];
+  return hydrateDates([...rows], ["replied_at"]);
 }
 
 export async function openDrafts(db: Database, limit = 25): Promise<DigestDraftRow[]> {
@@ -146,7 +151,7 @@ export async function openDrafts(db: Database, limit = 25): Promise<DigestDraftR
     ORDER BY d.updated_at DESC
     LIMIT ${limit}
   `);
-  return [...rows];
+  return hydrateDates([...rows], ["updated_at"]);
 }
 
 export type DispatchCounts = {
@@ -219,7 +224,7 @@ export async function loadAutomationSettings(db: Database): Promise<AutomationSe
       digest_enabled, digest_hour, digest_timezone, updated_by, updated_at
     FROM automation_settings
   `);
-  const row = [...rows][0];
+  const row = hydrateDates([...rows], ["updated_at"])[0];
   if (row === undefined) {
     // Migration 0006 inserts the single row. Its absence means the migration
     // did not run, which is not something to paper over with defaults.
