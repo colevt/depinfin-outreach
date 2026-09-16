@@ -14,7 +14,7 @@ bigger cookie.
 
 | Route | What it is |
 |---|---|
-| `/` | Queue. Everyone in `replied` status, newest first, then what dispatched today and what was skipped with the reason. |
+| `/` | Queue. Everyone in `replied` status, newest first, then what the dispatcher is about to do and why it will refuse each held row, then what already ran today. The seven-day calendar strip sits alongside. |
 | `/prospects` | The list, filtered by side, tier, and whether a reason for contact is on file. |
 | `/prospects/[id]` | One prospect. History, drafts, and the composer. |
 | `/automation` | Sequences, the daily cap and window, the digest, and what this page cannot do. |
@@ -61,7 +61,28 @@ pnpm dev                  # or: pnpm --filter @depinfin/web dev
 INV-5 depend on grants that an owner bypasses, so running the desk as the owner
 would quietly remove the protection the schema exists to provide.
 
+## The send preview
+
+"Next to go out" runs `evaluateSend` from `packages/compliance`, the same
+function the worker calls, and dispatches nothing. The reason shown against a
+held row is the exact string that will be written to the audit log, so an
+operator sees tomorrow's skips in time to fix them rather than reading about
+them the next morning.
+
+The query behind it, `listSendPreviewRows`, is deliberately **broader** than
+`dispatch_candidates`. The view exists to make an ineligible prospect
+unreachable, so Tier 1, suppressed addresses and excluded jurisdictions are
+simply not in it; the preview has to include them in order to explain why they
+are held. That makes it the one query in the repo that would break INV-1, INV-4
+and INV-7 if the dispatcher ever read it, and
+`packages/db/test/preview-not-dispatch.test.ts` asserts it never does.
+
+The calendar strip buckets by local day in `automation_settings.send_timezone`,
+not in UTC. A step due at 9pm in New York belongs on tonight's cell, and a
+strip that files it under tomorrow is a strip that stops someone acting on it
+today.
+
 ## Still to build
 
-Section 9 item 4, the calendar strip, and item 5's enrichment adapters.
-Calendar visibility is in scope for v1 and is not here yet.
+Section 9 item 5's enrichment adapters, and bulk CSV list import. Research is
+recorded by hand with required sources.

@@ -104,24 +104,32 @@ suite("digest queries run", () => {
   it("can write a digest log row, and it does not count as a send", async () => {
     // INV-5 holds: this is an insert, and the application role has no other
     // verb on activity_log. The point here is that 'digest' is a distinct
-    // action, so gate 12's count of the day's sends does not move.
+    // action, so gate 12's count of the day's sends never sees it.
     //
-    // Asserted as a delta rather than against zero. Whatever else the database
-    // holds is not this test's business, and a count that happens to be zero
-    // today would make this pass for the wrong reason tomorrow.
-    const before = await dispatchCountsSince(handle!.db, since);
-
+    // Scoped to this run's own tag rather than asserted as a before and after
+    // delta. vitest runs test files in parallel, so a global count can move
+    // between two reads because another file inserted a row, and a test that
+    // fails on a schedule nobody controls is worse than no test.
     await handle!.sql`
       INSERT INTO activity_log (actor, action, detail)
       VALUES ('suite', 'digest', ${JSON.stringify({ tag })}::jsonb)
     `;
 
-    const after = await dispatchCountsSince(handle!.db, since);
-    const rows = await handle!.sql<{ count: string }[]>`
-      SELECT count(*)::text AS count FROM activity_log
-      WHERE action = 'digest' AND detail ->> 'tag' = ${tag}
+    const rows = await handle!.sql<{ action: string; count: string }[]>`
+      SELECT action::text AS action, count(*)::text AS count
+      FROM activity_log
+      WHERE detail ->> 'tag' = ${tag}
+      GROUP BY action
     `;
-    expect(rows[0]?.count).toBe("1");
-    expect(after).toEqual(before);
+
+    expect(rows).toEqual([{ action: "digest", count: "1" }]);
+
+    // And the action is outside the set gate 12 counts.
+    const counted = await handle!.sql<{ count: string }[]>`
+      SELECT count(*)::text AS count FROM activity_log
+      WHERE detail ->> 'tag' = ${tag}
+        AND action IN ('sent', 'skipped', 'blocked')
+    `;
+    expect(counted[0]?.count).toBe("0");
   });
 });

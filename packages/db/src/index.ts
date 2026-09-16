@@ -7,3 +7,4 @@ export * from "./repositories/suppressions.js";
 export * from "./repositories/enrollments.js";
 export * from "./repositories/digest.js";
 export * from "./repositories/desk.js";
+export * from "./repositories/preview.js";

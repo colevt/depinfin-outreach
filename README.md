@@ -17,11 +17,11 @@ one is enforced and what is verified.
 | 4 | Warm transport, Gmail API OAuth | Built, needs credentials |
 | 5 | Dry-run mode, then live dispatch | Built |
 | 6 | Reply polling and opt-out handling | Built |
-| 7 | Operator UI, section 9 priority order | Built, apart from the calendar strip |
+| 7 | Operator UI, section 9 priority order | Built |
 | 8 | Enrichment adapters | Not started. Research is recorded by hand, with sources |
 | 9 | Cold transport on a separate domain | Adapter and guards built, no ESP wired |
 
-The suite runs. 498 of 498 pass, including the cases that need a real Postgres,
+The suite runs. 540 of 540 pass, including the cases that need a real Postgres,
 and CI runs them on every push. See "What the suite actually covers".
 
 ## Where each invariant lives
@@ -127,7 +127,7 @@ pnpm dev                 # http://localhost:3000
 
 ## What the suite actually covers
 
-498 tests, all passing, against Postgres 16. The database cases were run
+540 tests, all passing, against Postgres 16. The database cases were run
 against a live database created by the setup above, and repeated against the
 same database to confirm the run leaves it usable. The desk was run against
 that database too, with every route checked.

@@ -84,6 +84,8 @@ export const firms = pgTable("firms", {
   side: marketSideEnum("side").notNull().default("buy"),
   operatorCategory: operatorCategoryEnum("operator_category"),
   sectorThesis: text("sector_thesis"),
+  /** The five rubric inputs, so a rescore is recomputable. Migration 0009. */
+  scoreFactors: jsonb("score_factors"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
